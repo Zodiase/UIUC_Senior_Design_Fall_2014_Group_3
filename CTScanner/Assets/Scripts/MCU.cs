@@ -3,10 +3,17 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Ports;
+using UnityEngine.UI;
 
 public class MCU : MonoBehaviour {
 	
 	public WebCam wc;
+	public Button RescanButton;
+	public RectTransform SerialPortList;
+	public Button ListItem_Button_Prefab;
+
+	public RectTransform NoConnectionWarning;
+	public RectTransform SerialCommandControls;
 	
 	int activePortId = -1;
 	string activePortName = "";
@@ -40,10 +47,20 @@ public class MCU : MonoBehaviour {
 	void Update () {
 		
 	}
-	
+
+	public void ClearSerialPortList () {
+		foreach (Transform child in SerialPortList.transform) {
+			GameObject.Destroy (child.gameObject);
+		}
+	}
+
 	public void ScanSerialPorts () {
+		RescanButton.interactable = false;
+
 		// Updating ports resets connections.
 		SerialClose ();
+		// Resetting.
+		ClearSerialPortList ();
 		
 		// OSX and Windows uses different port names.
 		// And SerialPort.GetPortNames() does not work on Unix. Shame on you MacroHard!
@@ -59,7 +76,33 @@ public class MCU : MonoBehaviour {
 		#elif UNITY_STANDALONE_WIN
 		ports = SerialPort.GetPortNames();
 		#endif
+
+		for (int i = 0, n = ports.Length; i < n; i++) {
+			int portId = i;
+			// Create the button for selecting this camera feed.
+			Button thisSerialPortButton = Button.Instantiate (ListItem_Button_Prefab) as Button;
+			// Add the button to the camera feed list.
+			RectTransform thisSerialPortButtonRect = thisSerialPortButton.GetComponent<RectTransform> ();
+			thisSerialPortButtonRect.SetParent(SerialPortList);
+			thisSerialPortButtonRect.localScale = new Vector3 (1, 1, 1);
+			// Change button text.
+			thisSerialPortButtonRect.GetComponentInChildren<Text> ().text = ports[i];
+			// Set button behaviour.
+			thisSerialPortButton.onClick.AddListener (() => {
+				ColorBlock normalColorBlock = ListItem_Button_Prefab.colors;
+				foreach (Button button in SerialPortList.GetComponentsInChildren<Button> ()) {
+					button.colors = normalColorBlock;
+				}
+				SwitchPort (portId);
+				ColorBlock pressedColorBlock = ListItem_Button_Prefab.colors;
+				pressedColorBlock.normalColor = pressedColorBlock.highlightedColor = pressedColorBlock.pressedColor;
+				thisSerialPortButton.colors = pressedColorBlock;
+			});
+		}
+
 		print ("Serial ports updated.");
+
+		RescanButton.interactable = true;
 	}
 	
 	public int SwitchPort (int index) {
@@ -99,22 +142,19 @@ public class MCU : MonoBehaviour {
 		int faceId = Mathf.FloorToInt (facing);
 		int rotation = Mathf.FloorToInt ((facing - faceId) * 10);
 		print (string.Format ("Face: {0}:{1}.", faceId, rotation));
-		
-		// Resetting platform to 360 in order to start from 0.
-		yield return StartCoroutine (ServoTurningToRaw (value: 90, resetBusy: false));
-		
+
+		// Resetting platform to origin.
+		yield return StartCoroutine (PlatformResettingToBase ());
+
 		for (int i = 0; i < size; i++) {
-			int degree = Mathf.FloorToInt (stepSize * i);
-			print ("Resetting servo to origin.");
-			yield return StartCoroutine (ServoTurningToRaw (value: 10, resetBusy: false));
-			print (string.Format ("Asking servo to turn to {0} degrees.", degree));
-			yield return StartCoroutine (ServoTurningTo (degree: degree, resetBusy: false));
+			float degree = stepSize * i;
+			print (string.Format ("Turning platform to {0} degrees.", degree));
+			yield return StartCoroutine (PlatformTurningTo (degree: degree, resetBusy: false));
 			// Turn LED On.
 			yield return StartCoroutine (LEDTurningOn (resetBusy: false));
 			yield return new WaitForSeconds (3f);
 			// Take picture.
-			// [TODO]
-			int finalAngle = (rotation * 90 + degree) % 360;
+			float finalAngle = (rotation * 90 + degree) % 360;
 			string shotName = string.Format ("{0}_{1}", faceId, finalAngle);
 			wc.TakeSnapshot (shotName);
 			yield return new WaitForSeconds (0.5f);
@@ -128,10 +168,12 @@ public class MCU : MonoBehaviour {
 		yield break;
 	}
 	#endregion
-	
-	#region Servo Rotation
-	// Lower level functions used to communicate with MCU.
-	public void ServoTurnToRaw (int value) {
+
+	#region Stepper Rotation
+	/// <summary>
+	/// Keep rotating the stepper in one direction until the reset switch is triggered.
+	/// </summary>
+	public void PlatformResetToBase () {
 		// Only one task allowed at a time.
 		if (isBusy) {
 			return;
@@ -139,30 +181,27 @@ public class MCU : MonoBehaviour {
 		// else
 		
 		isBusy = true;
-		StartCoroutine (ServoTurningToRaw (value:value, resetBusy:true));
+		StartCoroutine (PlatformResettingToBase (resetBusy:true));
 	}
-	IEnumerator ServoTurningToRaw (int value, bool resetBusy = false) {
+	IEnumerator PlatformResettingToBase (bool resetBusy = false) {
 		Drop ();
-		Send (string.Format ("R{0}", value));
+		Send ("C");
 		// Wait for confirmation.
-		string resp;
-		do {
-			// Let the coroutine wait for the data so the app doesn't need to be blocked (for too long).
-			while (noData) {
-				yield return new WaitForFixedUpdate ();
-			}
-			// This line might still block because the data may not contain a line.
-			resp = ReceiveLine ();
-		} while (resp != "Servo stopped.");
+		// Let the coroutine wait for the data so the app doesn't need to be blocked (for too long).
+		while (noData) {
+			yield return new WaitForFixedUpdate ();
+		}
+		// This line might still block because the data may not contain a line.
+		ReceiveLine ();
 		Drop ();
-		
+
 		if (resetBusy) {
 			isBusy = false;
 		}
 		yield break;
 	}
-	
-	public void ServoTurnTo (int degree) {
+
+	public void PlatformTurnTo (float degree) {
 		// Only one task allowed at a time.
 		if (isBusy) {
 			return;
@@ -170,48 +209,12 @@ public class MCU : MonoBehaviour {
 		// else
 		
 		isBusy = true;
-		StartCoroutine (ServoTurningTo (degree:degree, resetBusy:true));
+		StartCoroutine (PlatformTurningTo (degree:degree, resetBusy:true));
 	}
-	IEnumerator ServoTurningTo (int degree, bool resetBusy = false) {
+	IEnumerator PlatformTurningTo (float degree, bool resetBusy = false) {
 		Drop ();
 		Send (string.Format ("D{0}", degree));
 		// Wait for confirmation.
-		string resp;
-		do {
-			// Let the coroutine wait for the data so the app doesn't need to be blocked (for too long).
-			while (noData) {
-				yield return new WaitForFixedUpdate ();
-			}
-			// This line might still block because the data may not contain a line.
-			resp = ReceiveLine ();
-		} while (resp != "Servo stopped.");
-		Drop ();
-		
-		if (resetBusy) {
-			isBusy = false;
-		}
-		yield break;
-	}
-	
-	/// <summary>
-	/// Detaches the servo. Servo commands are only effective when servo is attached.
-	/// </summary>
-	public void ServoDetach () {
-		// Only one task allowed at a time.
-		if (isBusy) {
-			return;
-		} // if
-		// else
-		
-		isBusy = true;
-		StartCoroutine (ServoDetaching (resetBusy:true));
-	}
-	IEnumerator ServoDetaching (bool resetBusy = false) {
-		Drop ();
-		Send ("X");
-		// Assume the next received line is the confirmation and no validation is done.
-		// [TODO] Change this.
-		
 		// Let the coroutine wait for the data so the app doesn't need to be blocked (for too long).
 		while (noData) {
 			yield return new WaitForFixedUpdate ();
@@ -219,70 +222,6 @@ public class MCU : MonoBehaviour {
 		// This line might still block because the data may not contain a line.
 		ReceiveLine ();
 		Drop ();
-		
-		if (resetBusy) {
-			isBusy = false;
-		}
-		yield break;
-	}
-	
-	/// <summary>
-	/// Attaches the servo. Servo commands are only effective when servo is attached.
-	/// Note: Servo is attached on launch so there is no need to manually do that on startup.
-	/// </summary>
-	public void ServoAttach () {
-		// Only one task allowed at a time.
-		if (isBusy) {
-			return;
-		} // if
-		// else
-		
-		isBusy = true;
-		StartCoroutine (ServoAttaching (resetBusy:true));
-	}
-	IEnumerator ServoAttaching (bool resetBusy = false) {
-		Drop ();
-		Send ("B");
-		// Assume the next received line is the confirmation and no validation is done.
-		// [TODO] Change this.
-		
-		// Let the coroutine wait for the data so the app doesn't need to be blocked (for too long).
-		while (noData) {
-			yield return new WaitForFixedUpdate ();
-		}
-		// This line might still block because the data may not contain a line.
-		ReceiveLine ();
-		Drop ();
-		
-		if (resetBusy) {
-			isBusy = false;
-		}
-		yield break;
-	}
-	
-	public void GetErrorEvaluation (int sampleCount) {
-		// Only one task allowed at a time.
-		if (isBusy) {
-			return;
-		} // if
-		// else
-		
-		isBusy = true;
-		StartCoroutine (GettingErrorEvaluation (sampleCount:sampleCount, resetBusy:true));
-	}
-	IEnumerator GettingErrorEvaluation (int sampleCount, bool resetBusy = false) {
-		Drop ();
-		Send (string.Format ("E{0}", sampleCount));
-		// Wait for confirmation.
-		
-		// Let the coroutine wait for the data so the app doesn't need to be blocked (for too long).
-		while (noData) {
-			yield return new WaitForFixedUpdate ();
-		}
-		// This line might still block because the data may not contain a line.
-		string resp = ReceiveLine ();
-		Drop ();
-		print (resp);
 		
 		if (resetBusy) {
 			isBusy = false;
@@ -290,8 +229,16 @@ public class MCU : MonoBehaviour {
 		yield break;
 	}
 	#endregion
-	
+
 	#region Light Switch
+	public void LEDToggle (bool isChecked) {
+		if (isChecked) {
+			LEDTurnOn ();
+		} else {
+			LEDTurnOff ();
+		}
+	}
+
 	public void LEDTurnOn () {
 		// Only one task allowed at a time.
 		if (isBusy) {
@@ -353,26 +300,10 @@ public class MCU : MonoBehaviour {
 	}
 	#endregion
 	
-	
 	#region Orientation Detection
-	public double GetPotentiometerReading (int sampleCount) {
+	public double GetServoAngle () {
 		Drop ();
-		Send (string.Format ("P{0}", sampleCount));
-		// Assume the next received line is the response and no validation is done.
-		// [TODO] Change this.
-		string resp = ReceiveLine ();
-		Drop ();
-		try {
-			return double.Parse (resp);
-		} catch (System.Exception) {
-			print (string.Format ("GetPotentiometerReading - Error when parsing to double: {0}", resp));
-			return -1;
-		}
-	}
-	
-	public double GetServoAngle (int sampleCount) {
-		Drop ();
-		Send (string.Format ("A{0}", sampleCount));
+		Send ("A");
 		// Assume the next received line is the response and no validation is done.
 		// [TODO] Change this.
 		string resp = ReceiveLine ();
@@ -488,6 +419,10 @@ public class MCU : MonoBehaviour {
 			activePortName = portName;
 			isBusy = false;
 			print ("Connected.");
+
+			// UI changes
+			SerialCommandControls.gameObject.SetActive(true);
+			NoConnectionWarning.gameObject.SetActive(false);
 		} else {
 			// Wrong
 			print ("Connect protocal dismatch.");
@@ -513,6 +448,10 @@ public class MCU : MonoBehaviour {
 		activePortName = "";
 		activePortId = -1;
 		isBusy = false;
+
+		// UI changes
+		SerialCommandControls.gameObject.SetActive(false);
+		NoConnectionWarning.gameObject.SetActive(true);
 	}
 
 	int bytesToRead {

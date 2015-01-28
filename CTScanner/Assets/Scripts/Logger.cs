@@ -5,7 +5,8 @@ using System.Collections;
 [RequireComponent (typeof (Text))]
 public class Logger : MonoBehaviour {
 
-	UnityEngine.UI.Text text;
+	public ScrollRect scrollRect;
+	Text text;
 
 	// Use this for initialization
 	void Start () {
@@ -14,7 +15,11 @@ public class Logger : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-	
+
+	}
+
+	void LateUpdate () {
+
 	}
 
 	void OnEnable () {
@@ -31,6 +36,14 @@ public class Logger : MonoBehaviour {
 		if (type != LogType.Log) {
 			text.text += "\n" + stackTrace;
 		}
+		StartCoroutine (updateScrollPositionNextFrame ());
+	}
+
+	IEnumerator updateScrollPositionNextFrame () {
+		yield return new WaitForEndOfFrame ();
+		//yield return new WaitForEndOfFrame ();
+		scrollRect.verticalNormalizedPosition = 0;
+		yield break;
 	}
 
 	public void Clear () {

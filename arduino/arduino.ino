@@ -40,6 +40,7 @@ void HandleCommand ()
     /**
      * Instructions
      * D{integer} : rotate to degree (closest step)
+     * S{integer} : set round per minute speed
      * C : reset (move back to one end to re-calibrate)
      * A : report angle
      * L{integer} : turn LED on if > 0 and off otherwise
@@ -53,6 +54,9 @@ void HandleCommand ()
     switch (cmd1) {
     case 'D':
       motor_turnTo(Serial.parseFloat());
+      break;
+    case 'S':
+      motor_setSpeed(Serial.parseInt());
       break;
     case 'C':
       motor_reset();
