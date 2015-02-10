@@ -61,16 +61,11 @@ void motor_setSpeed(int rpm)
 
 void motor_reset()
 {
-  /*
-  while (digitalRead(endStopPin) == LOW) {
-    stepper.step(1);
-  }
-  */
+  motor_resetEndLatch();
+  
   int stopVal;
-  //float stopAnalogVal;
   do {
     stopVal = digitalRead(endStopPin);
-    //stopAnalogVal = analogRead(endStopPin);
     stepper.step(1);
   } while (stopVal == LOW);
   
@@ -83,6 +78,8 @@ void motor_reset()
 void motor_resetTest()
 {
   Serial.print("Resetting...");
+  motor_resetEndLatch();
+  
   int stopVal;
   float stopAnalogVal;
   do {
@@ -90,7 +87,7 @@ void motor_resetTest()
     stopAnalogVal = analogRead(endStopPin);
     Serial.println(stopAnalogVal);
   } while (stopVal == LOW);
-  //while (digitalRead(endStopPin) == LOW) {}
+  
   motor_resetEndLatch();
   Serial.print("Done\n");
 }
