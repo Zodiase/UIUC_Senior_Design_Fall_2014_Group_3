@@ -201,6 +201,62 @@ public class MCU : MonoBehaviour {
 		yield break;
 	}
 
+	public void PlatformStepLeft () {
+		// Only one task allowed at a time.
+		if (isBusy) {
+			return;
+		} // if
+		// else
+		
+		isBusy = true;
+		StartCoroutine (PlatformSteppingLeft (resetBusy:true));
+	}
+	IEnumerator PlatformSteppingLeft (bool resetBusy = false) {
+		Drop ();
+		Send ("<");
+		// Wait for confirmation.
+		// Let the coroutine wait for the data so the app doesn't need to be blocked (for too long).
+		while (noData) {
+			yield return new WaitForFixedUpdate ();
+		}
+		// This line might still block because the data may not contain a line.
+		ReceiveLine ();
+		Drop ();
+		
+		if (resetBusy) {
+			isBusy = false;
+		}
+		yield break;
+	}
+
+	public void PlatformStepRight () {
+		// Only one task allowed at a time.
+		if (isBusy) {
+			return;
+		} // if
+		// else
+		
+		isBusy = true;
+		StartCoroutine (PlatformSteppingRight (resetBusy:true));
+	}
+	IEnumerator PlatformSteppingRight (bool resetBusy = false) {
+		Drop ();
+		Send (">");
+		// Wait for confirmation.
+		// Let the coroutine wait for the data so the app doesn't need to be blocked (for too long).
+		while (noData) {
+			yield return new WaitForFixedUpdate ();
+		}
+		// This line might still block because the data may not contain a line.
+		ReceiveLine ();
+		Drop ();
+		
+		if (resetBusy) {
+			isBusy = false;
+		}
+		yield break;
+	}
+
 	public void PlatformTurnTo (float degree) {
 		// Only one task allowed at a time.
 		if (isBusy) {
@@ -338,6 +394,15 @@ public class MCU : MonoBehaviour {
 			print (string.Format ("GetBoxFace - Error when parsing to float: {0}", resp));
 			return 0;
 		}
+	}
+
+	public void TestFaceScanning () {
+		Drop ();
+		Send ("TF");
+		// Assume the next received line is the response and no validation is done.
+		// [TODO] Change this.
+		ReceiveLine ();
+		Drop ();
 	}
 	#endregion
 	

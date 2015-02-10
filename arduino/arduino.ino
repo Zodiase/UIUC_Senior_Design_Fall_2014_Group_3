@@ -42,9 +42,13 @@ void HandleCommand ()
      * D{integer} : rotate to degree (closest step)
      * S{integer} : set round per minute speed
      * C : reset (move back to one end to re-calibrate)
+     * R : reset test
+     * P : test face scan
      * A : report angle
      * L{integer} : turn LED on if > 0 and off otherwise
      * F : report which face is down and its rotation
+     * < : turn left one step
+     * > : turn right one step
      * Anything else: print hello world
      *
      * All instructions should have at least one hand-shaking to ensure
@@ -61,6 +65,12 @@ void HandleCommand ()
     case 'C':
       motor_reset();
       break;
+    case 'R':
+      motor_resetTest();
+      break;
+    case 'P':
+      bps_testScan();
+      break;
     case 'A':
       motor_reportAngle();
       break;
@@ -69,6 +79,12 @@ void HandleCommand ()
       break;
     case 'F':
       bps_reportFace();
+      break;
+    case '<':
+      motor_stepLeft();
+      break;
+    case '>':
+      motor_stepRight();
       break;
     case '\n':
       break;

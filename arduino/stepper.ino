@@ -2,25 +2,31 @@
 #include <Stepper.h>
 
 // Stepper Pins
-const int stepperPin1 = 10;
-const int stepperPin2 = 11;
-const int endStopPin = 12;
+const int stepperPin1 = 11;
+const int stepperPin2 = 12;
+const int endStopPin = A1;
+const int resetClearPin = A2;
 
 // Stepper Step Size
 const float stepSizeDegrees = 1.8;
 
 // Stepper Steps in Total (This should conform to the step size)
-const int stepsPerRevolution = 200;
+const int stepsPerRevolution = 100;
 // Stepper Speed (Rounds per Minute)
-int stepperSpeedRPM = 120;
+int stepperSpeedRPM = 5;
 
 Stepper stepper (stepsPerRevolution, stepperPin1, stepperPin2);
 
 int stepperAngleInSteps = 0;
+const int endStopCountThreshold = 1000;
 
 void motor_setup()
 {
   pinMode(endStopPin, INPUT);
+  //digitalWrite(endStopPin, HIGH); // connect internal pull-up
+  pinMode(resetClearPin, OUTPUT);
+  digitalWrite(resetClearPin, LOW);
+  //motor_resetEndLatch();
   // Set the speed of the stepper motor.
   stepper.setSpeed(stepperSpeedRPM);
 }
@@ -34,7 +40,7 @@ void motor_turnTo(float angle)
   int targetAngleInSteps = (int) round(angle / stepSizeDegrees);
   
   // Ask the stepper motor to turn the offset.
-  stepper.step(targetAngleInSteps - stepperAngleInSteps);
+  stepper.step(stepperAngleInSteps - targetAngleInSteps);
   
   // Assume the previous operations are successful.
   stepperAngleInSteps = targetAngleInSteps;
@@ -55,12 +61,46 @@ void motor_setSpeed(int rpm)
 
 void motor_reset()
 {
-  while (digitalRead(endStopPin) != HIGH) {
-    stepper.step(-1);
+  /*
+  while (digitalRead(endStopPin) == LOW) {
+    stepper.step(1);
   }
+  */
+  int stopVal;
+  //float stopAnalogVal;
+  do {
+    stopVal = digitalRead(endStopPin);
+    //stopAnalogVal = analogRead(endStopPin);
+    stepper.step(1);
+  } while (stopVal == LOW);
+  
+  motor_resetEndLatch();
   stepperAngleInSteps = 0;
   // Report ending angle.
   motor_reportAngle();
+}
+
+void motor_resetTest()
+{
+  Serial.print("Resetting...");
+  int stopVal;
+  float stopAnalogVal;
+  do {
+    stopVal = digitalRead(endStopPin);
+    stopAnalogVal = analogRead(endStopPin);
+    Serial.println(stopAnalogVal);
+  } while (stopVal == LOW);
+  //while (digitalRead(endStopPin) == LOW) {}
+  motor_resetEndLatch();
+  Serial.print("Done\n");
+}
+
+void motor_resetEndLatch()
+{
+  digitalWrite(resetClearPin, HIGH);
+  delay(300);
+  //! Add some delay?
+  digitalWrite(resetClearPin, LOW);
 }
 
 void motor_reportAngle()
@@ -68,4 +108,18 @@ void motor_reportAngle()
   float realAngle = stepperAngleInSteps * stepSizeDegrees;
   Serial.print(realAngle);
   Serial.print("\n");
+}
+
+void motor_stepLeft()
+{
+  stepper.step(-1);
+  stepperAngleInSteps += 1;
+  motor_reportAngle();
+}
+
+void motor_stepRight()
+{
+  stepper.step(1);
+  stepperAngleInSteps -= 1;
+  motor_reportAngle();
 }

@@ -25,6 +25,15 @@ void bps_setup()
   pinMode(bpsCornerPin[3][1], INPUT);
 }
 
+void bps_testScan ()
+{
+  for (int i = 0, n = 4; i < n; i++) {
+    Serial.print(cornerVal(i));
+    Serial.print(" ");
+  }
+  Serial.print("\n");
+}
+
 void bps_reportFace ()
 {
   // faces are numbered from 1 to 6. 0 means no valid face detected.
@@ -34,7 +43,7 @@ void bps_reportFace ()
     cornerVal(1),
     cornerVal(2),
     cornerVal(3)
-    };
+  };
 
   Serial.print("Scanning for face pattern.\n");
 
