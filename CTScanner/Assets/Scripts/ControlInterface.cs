@@ -11,6 +11,10 @@ public class ControlInterface : MonoBehaviour {
 	public Slider ShoutsCountSlider;
 	public Text ShoutsCountText;
 
+	public GameObject StartPromptPanel;
+
+	public Text MotorSpeedText;
+
 	int shotsCount = -1;
 	// This array is used to map slider values to shots count values
 	int[] shotsCountSet = new int[] {
@@ -22,6 +26,8 @@ public class ControlInterface : MonoBehaviour {
 		50,
 		100
 	};
+
+	bool scanPerformed = false;
 
 	int sliderMinValue {
 		get {
@@ -60,6 +66,33 @@ public class ControlInterface : MonoBehaviour {
 		print (mc.GetServoAngle ());
 	}
 	public void StartScanButtonClicked () {
+		// Delete old captures if needed.
+		if (scanPerformed) {
+			// Show the prompt.
+			ShowStartPromptPanel ();
+		} else {
+			scanPerformed = true;
+			// Do not keep the old files.
+			StartScan (keepFiles: false);
+		}
+	}
+	public void StartScan (bool keepFiles) {
+		HideStartPromptPanel ();
+		if (!keepFiles) {
+			wc.ClearSnapshots ();
+		} // if
 		mc.PerformSuit (shotsCount);
+	}
+	public void ShowStartPromptPanel () {
+		StartPromptPanel.SetActive (true);
+	}
+	public void HideStartPromptPanel () {
+		StartPromptPanel.SetActive (false);
+	}
+
+	public void MotorSpeedSliderOnChange (float value) {
+		int sliderIntegralValue = Mathf.FloorToInt (value);
+		MotorSpeedText.text = sliderIntegralValue.ToString ();
+		mc.SetStepSpeed (sliderIntegralValue);
 	}
 }
