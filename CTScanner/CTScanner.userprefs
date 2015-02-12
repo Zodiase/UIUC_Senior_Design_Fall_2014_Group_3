@@ -1,9 +1,9 @@
 ﻿<Properties>
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" PreferredExecutionTarget="MonoDevelop.Default" />
   <MonoDevelop.Ide.Workbench ActiveDocument="Assets/Scripts/ControlInterface.cs">
     <Files>
-      <File FileName="Assets/Scripts/ControlInterface.cs" Line="57" Column="26" />
-      <File FileName="Assets/Scripts/MCU.cs" Line="399" Column="30" />
+      <File FileName="Assets/Scripts/MCU.cs" Line="289" Column="26" />
+      <File FileName="Assets/Scripts/ControlInterface.cs" Line="84" Column="3" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
