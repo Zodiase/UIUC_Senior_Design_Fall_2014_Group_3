@@ -162,11 +162,9 @@ public class MCU : MonoBehaviour {
 			yield return StartCoroutine (LEDTurningOff (resetBusy: false));
 			yield return new WaitForFixedUpdate ();
 		}
-
-		yield return StartCoroutine (PlatformTurningTo (degree: 0, resetBusy: false));
-
+		
 		isBusy = false;
-		print ("Suit complete. Now you may rotate the object.");
+		print ("Suit complete.");
 		yield break;
 	}
 	#endregion
@@ -286,12 +284,6 @@ public class MCU : MonoBehaviour {
 		}
 		yield break;
 	}
-	public void SetStepSpeed (int rpm) {
-		Drop ();
-		Send (string.Format ("S{0}", rpm));
-		ReceiveLine ();
-		Drop ();
-	}
 	#endregion
 
 	#region Light Switch
@@ -406,7 +398,7 @@ public class MCU : MonoBehaviour {
 
 	public void TestFaceScanning () {
 		Drop ();
-		Send ("P");
+		Send ("TF");
 		// Assume the next received line is the response and no validation is done.
 		// [TODO] Change this.
 		ReceiveLine ();

@@ -55,13 +55,6 @@ public class WebCam : MonoBehaviour {
 		}
 	}
 
-	public void ClearSnapshots () {
-		string[] files = System.IO.Directory.GetFiles (_SavePath);
-		foreach (string file in files) {
-			System.IO.File.Delete (file);
-		}
-	}
-
 	public void TakeSnapshot (string preferredName = "") {
 		if (activeWebCamTexture == null) {
 			return;
