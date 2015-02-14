@@ -15,6 +15,9 @@ public class ControlInterface : MonoBehaviour {
 
 	public Text MotorSpeedText;
 
+	public GameObject CameraControlPanel;
+	public GameObject MicrocontrollerControlPanel;
+
 	int shotsCount = -1;
 	// This array is used to map slider values to shots count values
 	int[] shotsCountSet = new int[] {
@@ -94,5 +97,10 @@ public class ControlInterface : MonoBehaviour {
 		int sliderIntegralValue = Mathf.FloorToInt (value);
 		MotorSpeedText.text = sliderIntegralValue.ToString ();
 		mc.SetStepSpeed (sliderIntegralValue);
+	}
+
+	public void UIToggleOnChange (bool hideUI) {
+		CameraControlPanel.SetActive (!hideUI);
+		MicrocontrollerControlPanel.SetActive (!hideUI);
 	}
 }
