@@ -83,6 +83,7 @@ public class ControlInterface : MonoBehaviour {
 		HideStartPromptPanel ();
 		if (!keepFiles) {
 			wc.ClearSnapshots ();
+			tk.ResetTestModelData ();
 		} // if
 		mc.PerformSuit (shotsCount);
 	}

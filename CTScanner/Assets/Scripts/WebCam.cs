@@ -22,8 +22,10 @@ public class WebCam : MonoBehaviour {
 	
 	// Use this for initialization
 	void Start () {
-		_SavePath = (Application.isEditor ? Application.dataPath : Application.persistentDataPath) + "/shots/";
-
+		_SavePath = (Application.isEditor ? Application.dataPath : Application.persistentDataPath) + "/shots";
+		if (!System.IO.Directory.Exists (_SavePath)) {
+			System.IO.Directory.CreateDirectory (_SavePath);
+		}
 		defaultTexture = renderer.material.mainTexture;
 
 		// Cache device names.
@@ -74,7 +76,7 @@ public class WebCam : MonoBehaviour {
 
 		System.IO.Directory.CreateDirectory(_SavePath);
 
-		string filename = _SavePath + ((preferredName == "") ? _CaptureCounter.ToString () : preferredName) + ".png";
+		string filename = _SavePath + "/" + ((preferredName == "") ? _CaptureCounter.ToString () : preferredName) + ".png";
 
 		System.IO.File.WriteAllBytes(filename, snap.EncodeToPNG());
 		++_CaptureCounter;
